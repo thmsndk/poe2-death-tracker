@@ -15,54 +15,58 @@ A death and leveling tracker for Path of Exile 2. This tool monitors your game l
    npm install
    npm start
    ```
+6. The tracker will automatically try to find your Path of Exile 2 installation
+   - Supports both Steam and Standalone installations
+   - If not found, you'll be prompted to enter the path manually
 
-The tracker will create a `death-stats` folder (or your specified output directory) containing:
+### Output Files
 
-### Basic Stats
+The tracker creates a `death-stats` folder in your current directory containing:
 
-- `stats.json` - Complete tracking data (all characters, deaths, and leveling info)
+#### Basic Stats
+
+- `stats.json` - Complete tracking data
 - `total_deaths.txt` - Total death count across all characters
 - `character_stats.json` - Detailed JSON stats for all characters
 - `recent_deaths.txt` - Log of all deaths
 - `last_five_deaths.txt` - Most recent 5 deaths
 
-### Current Character Stats
+#### Current Character Stats
 
 - `current_character.json` - Full JSON stats for current character
-- `current_character_recent_levels.txt` - Recent level progression (horizontal format)
+- `current_character_recent_levels.txt` - Recent level progression (horizontal)
 - `current_character_all_levels.txt` - All levels in compact format
 - `current_character_all_levels_vertical.txt` - All levels in vertical format
 - `current_character_records.txt` - Speed records and averages
 - `current_character_session.txt` - Current session statistics
-- `current_character_basic1.txt` - Simple stats format 1
-- `current_character_basic2.txt` - Simple stats format 2
-- `current_character_basic3.txt` - Simple stats format 3
-- `current_character_basic4.txt` - Simple stats format 4
-- `current_character_recent_levels_vertical.txt` - Recent levels in vertical format
+- `current_character_basic1.txt` through `basic4.txt` - Simple stats formats
+- `current_character_recent_levels_vertical.txt` - Recent levels (vertical)
 
 ### Using with OBS
 
 1. Add a "Text (GDI+)" source to your scene
 2. Check "Read from file"
-3. Browse to your output directory and select any of the .txt files above
-4. Style the text as needed in OBS
+3. Browse to the `death-stats` folder in your tracker directory
+4. Select any of the .txt files above
+5. Style the text as needed in OBS
 
-### Custom Settings
-
-By default, the tracker looks for your Path of Exile 2 logs in:
-`D:\SteamLibrary\steamapps\common\Path of Exile 2\logs\Client.txt`
-
-If your game is installed elsewhere, you can specify the path:
+### Command Line Options
 
 ```bash
-npm start -- --path "C:\Games\Path of Exile 2\logs\Client.txt"
+# Start with specific paths
+npm start -- --path "path/to/Client.txt" --output "path/to/output"
+
+# Reset configuration
+npm start -- --reset-config
 ```
 
-You can also change the output folder (default is "death-stats"):
+### Configuration
 
-```bash
-npm start -- --output "my-stats"
-```
+The tracker saves your configuration in `config/config.json`. To change settings:
+
+1. Run with `--reset-config` flag
+2. Or manually edit the config file
+3. Or use command line arguments (see above)
 
 ## For Developers
 
