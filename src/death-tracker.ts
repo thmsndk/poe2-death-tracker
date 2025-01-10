@@ -53,7 +53,7 @@ interface CharacterStats {
   globalDeathStats: TimeStats;
 }
 
-interface DeathTrackerConfig {
+export interface DeathTrackerConfig {
   logPath?: string;
   outputDir?: string;
 }

@@ -34,3 +34,6 @@ coverage/
 
 # Project specific
 death-stats/ 
+
+# Config
+config/

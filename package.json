@@ -21,9 +21,11 @@
   "author": "thmsndk",
   "license": "MIT",
   "dependencies": {
-    "commander": "^11.1.0"
+    "commander": "^11.1.0",
+    "inquirer": "^12.3.0"
   },
   "devDependencies": {
+    "@types/inquirer": "^9.0.7",
     "@types/node": "^20.11.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
