@@ -2,6 +2,10 @@
 
 A death and leveling tracker for Path of Exile 2. This tool monitors your game logs and tracks your character deaths and level progression. Perfect for streamers who want to display death counts and level progression on their stream!
 
+![Overlay Example](overlay.png)
+
+> 💡 **Font Setup**: For the authentic Path of Exile 2 look (as shown in the image above), use [Fontin SmallCaps](https://www.exljbris.com/fontin.html) in your OBS text sources. This is the official font used in-game for UI elements.
+
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/B0B71865NT)
 
 ## Quick Start (For Streamers & Users)
