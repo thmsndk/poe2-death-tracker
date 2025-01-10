@@ -1,65 +1,72 @@
 import { existsSync } from "fs";
+import { readFileSync } from "fs";
 import path from "path";
+import * as VDF from "vdf-parser";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
 
 interface GameInstallation {
   logPath: string | null;
   installPath: string | null;
   installType: "steam" | "standalone" | null;
+  locationDescription: string | null;
+}
+
+interface SteamLibraryFolders {
+  libraryfolders: {
+    [key: string]: {
+      path: string;
+      [key: string]: unknown;
+    };
+  };
 }
 
 export class POE2InstallationFinder {
   private steamPaths = [
-    // Steam default paths
-    "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Path of Exile 2",
-    "C:\\Program Files\\Steam\\steamapps\\common\\Path of Exile 2",
-    "D:\\SteamLibrary\\steamapps\\common\\Path of Exile 2",
+    // Default Steam paths
+    "C:\\Program Files (x86)\\Steam",
+    "C:\\Program Files\\Steam",
     // Linux Steam paths
-    "~/.steam/steam/steamapps/common/Path of Exile 2",
-    "~/.local/share/Steam/steamapps/common/Path of Exile 2",
+    "~/.steam/steam",
+    "~/.local/share/Steam",
   ];
 
   private standalonePaths = [
-    // Windows default GGG paths
     "C:\\Program Files (x86)\\Grinding Gear Games\\Path of Exile 2",
     "C:\\Program Files\\Grinding Gear Games\\Path of Exile 2",
-    // Linux GGG paths (if they support it)
-    "~/.local/share/Path of Exile 2",
   ];
 
-  private additionalSteamLibraries: string[] = [];
+  async findInstallation() {
+    // Try Windows Registry first for Steam path
+    const steamPath = await this.findSteamPathFromRegistry();
+    if (steamPath) {
+      this.steamPaths.unshift(steamPath); // Add registry path as highest priority
+    }
 
-  constructor() {
-    this.loadAdditionalSteamLibraries();
-  }
+    // Check all Steam installations
+    for (const basePath of this.steamPaths) {
+      const steamPath = this.expandPath(basePath);
+      const libraryFolders = await this.getSteamLibraryFolders(steamPath);
 
-  private loadAdditionalSteamLibraries(): void {
-    // Try to read Steam's libraryfolders.vdf to find additional Steam libraries
-    const steamConfigPaths = [
-      "C:\\Program Files (x86)\\Steam\\steamapps\\libraryfolders.vdf",
-      "C:\\Program Files\\Steam\\steamapps\\libraryfolders.vdf",
-      "~/.steam/steam/steamapps/libraryfolders.vdf",
-    ];
+      for (const libraryPath of libraryFolders) {
+        const gamePath = path.join(
+          libraryPath,
+          "steamapps",
+          "common",
+          "Path of Exile 2"
+        );
+        const logPath = path.join(gamePath, "logs", "Client.txt");
 
-    // TODO: Parse libraryfolders.vdf to find additional Steam libraries
-    // This would require implementing a simple VDF parser
-    // For now, we'll just check common paths
-  }
-
-  public findInstallation(): GameInstallation {
-    // Check Steam paths first
-    for (const basePath of [
-      ...this.steamPaths,
-      ...this.additionalSteamLibraries,
-    ]) {
-      const gamePath = this.expandPath(basePath);
-      const logPath = path.join(gamePath, "logs", "Client.txt");
-
-      if (existsSync(logPath)) {
-        return {
-          logPath,
-          installPath: gamePath,
-          installType: "steam",
-        };
+        if (existsSync(logPath)) {
+          return {
+            logPath,
+            installPath: gamePath,
+            installType: "steam",
+            locationDescription: this.getLocationDescription(logPath),
+          };
+        }
       }
     }
 
@@ -73,6 +80,7 @@ export class POE2InstallationFinder {
           logPath,
           installPath: gamePath,
           installType: "standalone",
+          locationDescription: this.getLocationDescription(logPath),
         };
       }
     }
@@ -81,7 +89,76 @@ export class POE2InstallationFinder {
       logPath: null,
       installPath: null,
       installType: null,
+      locationDescription: null,
     };
+  }
+
+  private async findSteamPathFromRegistry(): Promise<string | null> {
+    if (process.platform !== "win32") return null;
+
+    try {
+      const { stdout } = await execAsync(
+        'reg query "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Valve\\Steam" /v "InstallPath"'
+      );
+
+      const match = stdout.match(/InstallPath\s+REG_SZ\s+([^\r\n]+)/);
+      return match ? match[1] : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async getSteamLibraryFolders(steamPath: string): Promise<string[]> {
+    const libraryFoldersPath = path.join(
+      steamPath,
+      "steamapps",
+      "libraryfolders.vdf"
+    );
+
+    if (!existsSync(libraryFoldersPath)) {
+      return [steamPath];
+    }
+
+    try {
+      const vdfContent = readFileSync(libraryFoldersPath, "utf-8");
+      const parsed = VDF.parse(vdfContent) as SteamLibraryFolders;
+      const libraries: string[] = [steamPath];
+
+      if (parsed.libraryfolders) {
+        Object.values(parsed.libraryfolders).forEach((library) => {
+          if (library?.path) {
+            libraries.push(library.path);
+          }
+        });
+      }
+
+      return libraries;
+    } catch (error) {
+      console.log("⚠️ Error parsing Steam library folders");
+      return [steamPath];
+    }
+  }
+
+  private getLocationDescription(p: string): string {
+    // Convert Windows drive letters to more readable format
+    if (process.platform === "win32") {
+      const drive = p.substring(0, 2);
+      const rest = p.substring(2);
+      const driveDescription =
+        drive === "C:"
+          ? "System Drive (C:)"
+          : drive === "D:"
+          ? "Secondary Drive (D:)"
+          : `Drive ${drive}`;
+      return `${driveDescription}${rest}`;
+    }
+
+    // For Linux/Mac, make home directory more readable
+    if (p.startsWith(process.env.HOME || "")) {
+      return p.replace(process.env.HOME || "", "~/");
+    }
+
+    return p;
   }
 
   private expandPath(p: string): string {

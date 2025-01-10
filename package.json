@@ -22,7 +22,8 @@
   "license": "MIT",
   "dependencies": {
     "commander": "^11.1.0",
-    "inquirer": "^12.3.0"
+    "inquirer": "^12.3.0",
+    "vdf-parser": "^1.2.1"
   },
   "devDependencies": {
     "@types/inquirer": "^9.0.7",

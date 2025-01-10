@@ -14,6 +14,9 @@ importers:
       inquirer:
         specifier: ^12.3.0
         version: 12.3.0(@types/node@20.17.12)
+      vdf-parser:
+        specifier: ^1.2.1
+        version: 1.2.1
     devDependencies:
       '@types/inquirer':
         specifier: ^9.0.7
@@ -461,6 +464,9 @@ packages:
 
   v8-compile-cache-lib@3.0.1:
     resolution: {integrity: sha512-wa7YjyUGfNZngI/vtK0UHAN+lgDCxBPCylVXGp0zu59Fz5aiGtNXaq3DhIov063MorB+VfufLh3JlF2KdTK3xg==}
+
+  vdf-parser@1.2.1:
+    resolution: {integrity: sha512-g5c73LP8NSebruEiVjOpV6KlN6xgVXBXc5UbexHWzjkatLJR++gUBhg76YqfJ9j4ZLfZ+Hv00592uiDywR+dWg==}
 
   wrap-ansi@6.2.0:
     resolution: {integrity: sha512-r6lPcBGxZXlIcymEu7InxDMhdW0KDxpLgoFLcguasxCaJ/SOIZwINatK9KY/tf+ZrlywOKU0UDj3ATXUBfxJXA==}
@@ -910,6 +916,8 @@ snapshots:
   undici-types@6.19.8: {}
 
   v8-compile-cache-lib@3.0.1: {}
+
+  vdf-parser@1.2.1: {}
 
   wrap-ansi@6.2.0:
     dependencies:

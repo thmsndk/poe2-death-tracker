@@ -51,7 +51,7 @@ async function saveConfig(config: Config): Promise<void> {
 async function setupConfig(): Promise<Config> {
   const installationFinder = new POE2InstallationFinder();
   const { logPath: detectedPath, installType } =
-    installationFinder.findInstallation();
+    await installationFinder.findInstallation();
 
   if (detectedPath) {
     console.log(`🎮 Found ${installType} installation!`);
