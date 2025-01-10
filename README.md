@@ -31,7 +31,6 @@ The tracker creates a `death-stats` folder in your current directory containing:
 
 - `stats.json` - Complete tracking data
 - `total_deaths.txt` - Total death count across all characters
-- `character_stats.json` - Detailed JSON stats for all characters
 - `recent_deaths.txt` - Log of all deaths
 - `last_five_deaths.txt` - Most recent 5 deaths
 
