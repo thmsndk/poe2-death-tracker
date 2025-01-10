@@ -2,6 +2,8 @@
 
 A death and leveling tracker for Path of Exile 2. This tool monitors your game logs and tracks your character deaths and level progression. Perfect for streamers who want to display death counts and level progression on their stream!
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/B0B71865NT)
+
 ## Quick Start (For Streamers & Users)
 
 1. Install [Node.js](https://nodejs.org/) (v18 or higher)
@@ -89,15 +91,3 @@ pnpm dev
 pnpm build
 pnpm start:prod
 ```
-
-## License
-
-MIT
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m '✨ Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
