@@ -20,8 +20,11 @@ A death and leveling tracker for Path of Exile 2. This tool monitors your game l
    npm start
    ```
 6. The tracker will automatically try to find your Path of Exile 2 installation
+
    - Supports both Steam and Standalone installations
    - If not found, you'll be prompted to enter the path manually
+
+   ![Setup Process](setup.gif)
 
 ### Output Files
 
