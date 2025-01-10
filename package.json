@@ -1,0 +1,33 @@
+{
+  "name": "poe2-death-tracker",
+  "version": "0.1.0",
+  "description": "Death and leveling tracker for Path of Exile 2",
+  "main": "dist/index.js",
+  "bin": {
+    "poe2-death-tracker": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/index.ts",
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "start:prod": "node dist/index.js"
+  },
+  "keywords": [
+    "path of exile",
+    "poe2",
+    "death tracker",
+    "gaming"
+  ],
+  "author": "thmsndk",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.3"
+  },
+  "packageManager": "pnpm@9.5.0+sha1.8c155dc114e1689d18937974f6571e0ceee66f1d"
+}
