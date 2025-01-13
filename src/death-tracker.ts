@@ -75,6 +75,8 @@ export class DeathTracker {
       "D:\\SteamLibrary\\steamapps\\common\\Path of Exile 2\\logs\\Client.txt";
     this.statsFile = `${this.outputDir}/stats.json`;
     this.stats = this.loadStats();
+    this.populateDeathEventsFromStats();
+    this.updateStats();
   }
 
   private loadStats(): CharacterStats {
@@ -715,5 +717,24 @@ export class DeathTracker {
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
     return `${hours}h ${remainingMinutes}m`;
+  }
+
+  private populateDeathEventsFromStats(): void {
+    // Reconstruct death events from character stats
+    for (const [character, info] of Object.entries(this.stats.characters)) {
+      if (info.lastSeen && info.deaths > 0) {
+        // Add at least the last known death
+        this.deathEvents.push({
+          timestamp: info.lastSeen,
+          character,
+          class: info.class,
+        });
+      }
+    }
+    // Sort events by timestamp to maintain chronological order
+    this.deathEvents.sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
   }
 }
