@@ -320,9 +320,12 @@ export class DeathTracker {
             .map((e) => {
               const charInfo = this.stats.characters[e.character];
               const classStr = charInfo?.class ? ` (${charInfo.class})` : "";
-              return `${e.timestamp} - ${e.character}${classStr} died (Total: ${
-                charInfo?.deaths || 1
-              })`;
+              const level = charInfo?.levelingStats?.currentLevel ?? "??";
+              const totalStr =
+                (charInfo?.deaths || 0) > 1
+                  ? ` (Total: ${charInfo?.deaths})`
+                  : "";
+              return `${e.timestamp} - ${e.character}${classStr} Level ${level} died${totalStr}`;
             })
             .join("\n");
           await fs.writeFile(
@@ -335,9 +338,12 @@ export class DeathTracker {
             .map((e) => {
               const charInfo = this.stats.characters[e.character];
               const classStr = charInfo?.class ? ` (${charInfo.class})` : "";
-              return `${e.timestamp} - ${e.character}${classStr} (Total: ${
-                charInfo?.deaths || 1
-              })`;
+              const level = charInfo?.levelingStats?.currentLevel ?? "??";
+              const totalStr =
+                (charInfo?.deaths || 0) > 1
+                  ? ` (Total: ${charInfo?.deaths})`
+                  : "";
+              return `${e.timestamp} - ${e.character}${classStr} Level ${level} died${totalStr}`;
             })
             .filter((line) => !line.includes("undefined"))
             .join("\n");
