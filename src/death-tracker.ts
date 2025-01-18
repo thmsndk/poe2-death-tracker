@@ -2,6 +2,7 @@ import * as fs from "fs/promises";
 import { existsSync, readFileSync } from "fs";
 import { watch } from "fs";
 import * as path from "path";
+import { TwitchAPI } from "./core/TwitchAPI";
 
 interface TimeStats {
   byHour: Record<number, number>;
@@ -56,6 +57,9 @@ interface CharacterStats {
 export interface DeathTrackerConfig {
   logPath?: string;
   outputDir?: string;
+  twitch?: {
+    enabled: boolean;
+  };
 }
 
 export class DeathTracker {
@@ -66,6 +70,7 @@ export class DeathTracker {
   private statsFile: string;
   private logPath: string;
   private lastPosition: number = 0;
+  private twitchAPI?: TwitchAPI;
 
   constructor(config?: DeathTrackerConfig) {
     console.log("🚀 Initializing Death Tracker...");
@@ -77,6 +82,12 @@ export class DeathTracker {
     this.stats = this.loadStats();
     this.populateDeathEventsFromStats();
     this.updateStats();
+    if (config?.twitch?.enabled) {
+      this.twitchAPI = new TwitchAPI(config.twitch);
+      console.log(
+        "🎮 Twitch integration enabled - Stream markers will be created for deaths and level ups"
+      );
+    }
   }
 
   private loadStats(): CharacterStats {
@@ -260,6 +271,13 @@ export class DeathTracker {
         `📈 Level up - ${character} (${newLevel.class}) reached level ${newLevel.level}`
       );
 
+      // Create stream marker if enabled
+      if (this.twitchAPI) {
+        await this.twitchAPI.createStreamMarker(
+          `🎉 ${character} (${newLevel.class}) reached level ${newLevel.level}!`
+        );
+      }
+
       // Generate current character stats for the most recent character that leveled
       await this.generateCurrentCharacterStats(character);
       await this.saveStats();
@@ -299,6 +317,11 @@ export class DeathTracker {
         }(Total: ${this.stats.characters[character].deaths})`
       );
       await this.saveStats();
+
+      // Create stream marker if enabled
+      if (this.twitchAPI) {
+        await this.twitchAPI.createStreamMarker(`💀 ${character} died!`);
+      }
     }
 
     try {

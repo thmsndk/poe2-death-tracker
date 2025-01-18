@@ -7,10 +7,21 @@ import inquirer from "inquirer";
 import fs from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
+import {
+  TwitchAuth,
+  TwitchAuthResult,
+  TwitchCredentials,
+  AuthFlow,
+} from "./core/TwitchAuth";
 
 interface Config {
   logPath: string;
   outputDir: string;
+  twitch?: {
+    enabled: boolean;
+    credentials?: TwitchCredentials;
+    auth?: TwitchAuthResult;
+  };
 }
 
 const CONFIG_DIR = "config";
@@ -24,6 +35,7 @@ program
   .option("-p, --path <path>", "Path to Client.txt file")
   .option("-o, --output <dir>", "Output directory for stats")
   .option("--reset-config", "Reset configuration and prompt for new paths")
+  .option("--test-twitch", "Test Twitch authentication flow")
   .parse();
 
 async function loadConfig(): Promise<Config | null> {
@@ -97,11 +109,152 @@ async function setupConfig(): Promise<Config> {
     },
   ]);
 
-  return answers;
+  const twitchConfig = await setupTwitchConfig();
+
+  const config: Config = {
+    logPath: answers.logPath,
+    outputDir: answers.outputDir,
+    twitch: twitchConfig,
+  };
+
+  return config;
+}
+
+async function setupTwitchConfig(): Promise<Config["twitch"]> {
+  const enableTwitch = await inquirer.prompt([
+    {
+      type: "confirm",
+      name: "enabled",
+      message:
+        "Would you like to enable Twitch integration for stream markers?",
+      default: true,
+    },
+  ]);
+
+  if (!enableTwitch.enabled) {
+    return { enabled: false };
+  }
+
+  // Show setup instructions
+  TwitchAuth.showSetupInstructions();
+
+  const credentialsPrompt = await inquirer.prompt([
+    {
+      type: "input",
+      name: "clientId",
+      message: "Enter your Twitch Client ID:",
+      validate: (input) => input.length > 0 || "Client ID is required",
+    },
+    {
+      type: "password",
+      name: "clientSecret",
+      message:
+        "Enter your Twitch Client Secret (optional, enables token refresh):",
+      mask: "*",
+    },
+  ]);
+
+  const credentials: TwitchCredentials = {
+    clientId: credentialsPrompt.clientId,
+    ...(credentialsPrompt.clientSecret && {
+      clientSecret: credentialsPrompt.clientSecret,
+    }),
+  };
+
+  try {
+    console.log("🎮 Starting Twitch authentication...");
+    console.log("📝 A browser window will open for you to authorize the app");
+
+    const auth = await TwitchAuth.startAuthFlow(
+      credentials,
+      credentials.clientSecret ? AuthFlow.AuthCode : AuthFlow.Implicit
+    );
+
+    console.log("✅ Twitch authentication successful!");
+    if (auth.refreshToken) {
+      console.log("🔄 Token refresh is enabled!");
+    } else {
+      console.log(
+        "⚠️ Token will expire in 1 hour. Provide a Client Secret to enable auto-refresh."
+      );
+    }
+
+    return {
+      enabled: true,
+      credentials,
+      auth,
+    };
+  } catch (error) {
+    console.error("❌ Twitch authentication failed:", error);
+    return { enabled: false };
+  }
 }
 
 async function main() {
   const options = program.opts();
+
+  if (options.testTwitch) {
+    try {
+      console.log("🎮 Testing Twitch authentication...");
+
+      // Show setup instructions
+      TwitchAuth.showSetupInstructions();
+
+      const credentialsPrompt = await inquirer.prompt([
+        {
+          type: "input",
+          name: "clientId",
+          message: "Enter your Twitch Client ID:",
+          validate: (input) => input.length > 0 || "Client ID is required",
+        },
+        {
+          type: "password",
+          name: "clientSecret",
+          message:
+            "Enter your Twitch Client Secret (optional, enables token refresh):",
+          mask: "*",
+        },
+      ]);
+
+      const credentials: TwitchCredentials = {
+        clientId: credentialsPrompt.clientId,
+        ...(credentialsPrompt.clientSecret && {
+          clientSecret: credentialsPrompt.clientSecret,
+        }),
+      };
+
+      console.log("📝 A browser window will open for you to authorize the app");
+      const auth = await TwitchAuth.startAuthFlow(
+        credentials,
+        credentials.clientSecret ? AuthFlow.AuthCode : AuthFlow.Implicit
+      );
+
+      console.log("\n✅ Authentication successful!");
+      console.log("\nToken info:");
+      console.log(
+        `🕒 Obtained at: ${new Date(auth.obtainedAt).toLocaleString()}`
+      );
+      console.log(`⏳ Expires in: ${auth.expiresIn} seconds`);
+      console.log(`🔄 Refresh enabled: ${auth.refreshToken ? "Yes" : "No"}`);
+
+      if (auth.refreshToken && credentials.clientSecret) {
+        console.log("\n🔄 Testing token refresh...");
+        const refreshed = await TwitchAuth.refreshToken(
+          credentials,
+          auth.refreshToken
+        );
+        console.log("✅ Token refresh successful!");
+        console.log(
+          `🕒 New token obtained at: ${new Date(
+            refreshed.obtainedAt
+          ).toLocaleString()}`
+        );
+      }
+    } catch (error) {
+      console.error("❌ Authentication failed:", error);
+    }
+    return;
+  }
 
   // Command line arguments take precedence
   if (options.path && options.output) {
