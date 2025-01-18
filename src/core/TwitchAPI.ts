@@ -1,5 +1,10 @@
 import axios from "axios";
-import { TwitchAuth, TwitchAuthResult, TwitchCredentials } from "./TwitchAuth";
+import {
+  AuthFlow,
+  TwitchAuth,
+  TwitchAuthResult,
+  TwitchCredentials,
+} from "./TwitchAuth";
 
 export class TwitchAPI {
   private config: {
@@ -16,6 +21,41 @@ export class TwitchAPI {
     auth?: TwitchAuthResult;
   }) {
     this.config = config;
+    // Initialize immediately
+    this.initialize().catch((error) => {
+      console.error("❌ Failed to initialize Twitch API:", error.message);
+      this.config.enabled = false;
+    });
+  }
+
+  private async initialize(): Promise<void> {
+    if (!this.config.enabled) {
+      return;
+    }
+
+    if (!this.config.credentials?.clientId) {
+      console.log("⚠️ Twitch API disabled: No client ID provided");
+      this.config.enabled = false;
+      return;
+    }
+
+    // If we don't have auth or token is invalid, start auth flow
+    if (!this.config.auth || !(await this.ensureValidToken())) {
+      console.log("🔑 Starting Twitch authentication flow...");
+      try {
+        this.config.auth = await TwitchAuth.startAuthFlow(
+          this.config.credentials,
+          this.config.credentials.clientSecret
+            ? AuthFlow.AuthCode
+            : AuthFlow.Implicit
+        );
+        console.log("✅ Twitch authentication successful");
+      } catch (error: any) {
+        console.error("❌ Twitch authentication failed:", error.message);
+        this.config.enabled = false;
+        throw error;
+      }
+    }
   }
 
   private async getUserId(): Promise<string> {
@@ -102,6 +142,13 @@ export class TwitchAPI {
 
   async createStreamMarker(description: string): Promise<void> {
     if (!this.config.enabled || !this.config.auth) {
+      return;
+    }
+
+    // Add token validation before making the request
+    const isTokenValid = await this.ensureValidToken();
+    if (!isTokenValid) {
+      console.log("⚠️ Cannot create marker: Invalid or expired Twitch token");
       return;
     }
 
