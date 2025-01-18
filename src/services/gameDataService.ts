@@ -8,6 +8,15 @@ export interface MonsterVariety {
   BossHealthBar: boolean;
 }
 
+export interface WorldArea {
+  _index: number;
+  Id: string;
+  Name: string;
+  Act: number;
+  IsTown: boolean;
+  AreaLevel: number;
+}
+
 export interface Match<T> {
   item: T;
   matchedBy: string;
@@ -15,18 +24,20 @@ export interface Match<T> {
 
 export class GameDataService {
   public monsterVarieties: MonsterVariety[] = [];
+  public worldAreas: WorldArea[] = [];
   private language: string = "English"; // Default to English
 
   async loadData(dataPath: string) {
     try {
       const tablesPath = path.join(dataPath, "data", "tables", this.language);
 
-      const monsterVarietiesData = await fs.readFile(
-        path.join(tablesPath, "MonsterVarieties.json"),
-        "utf-8"
-      );
+      const [monsterVarietiesData, worldAreasData] = await Promise.all([
+        fs.readFile(path.join(tablesPath, "MonsterVarieties.json"), "utf-8"),
+        fs.readFile(path.join(tablesPath, "WorldAreas.json"), "utf-8"),
+      ]);
 
       this.monsterVarieties = JSON.parse(monsterVarietiesData);
+      this.worldAreas = JSON.parse(worldAreasData);
     } catch (error) {
       console.error(
         `Failed to load game data for language ${this.language}:`,
@@ -72,6 +83,24 @@ export class GameDataService {
         matches.push({
           item,
           matchedBy: matchingName,
+        });
+      }
+    });
+
+    return matches;
+  }
+
+  findExactWorldArea(id: string | string[]): Match<WorldArea>[] {
+    const ids = Array.isArray(id) ? id : [id];
+    const matches: Match<WorldArea>[] = [];
+
+    this.worldAreas.forEach((item) => {
+      const itemId = item.Id;
+      const matchingId = ids.find((n) => itemId === n);
+      if (matchingId) {
+        matches.push({
+          item,
+          matchedBy: matchingId,
         });
       }
     });
