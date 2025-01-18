@@ -1,0 +1,10 @@
+{
+  "patch": "4.1.1.1",
+  "tables": [
+    {
+      "name": "MonsterVarieties",
+      "columns": ["Id", "Name", "BossHealthBar"]
+    }
+  ],
+  "translations": ["English"]
+}

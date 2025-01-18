@@ -37,3 +37,6 @@ death-stats/
 
 # Config
 config/
+
+# Data
+data/.cache/

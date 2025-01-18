@@ -10,7 +10,9 @@
     "build": "tsc",
     "start": "ts-node src/index.ts",
     "dev": "ts-node-dev --respawn src/index.ts",
-    "start:prod": "node dist/index.js"
+    "start:prod": "node dist/index.js",
+    "data-sync": "ts-node scripts/data-sync.ts",
+    "patch-version": "ts-node scripts/patch-version.ts"
   },
   "keywords": [
     "path of exile",
@@ -35,7 +37,8 @@
     "@types/opener": "^1.4.3",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "pathofexile-dat": "^14.0.0"
   },
   "packageManager": "pnpm@9.5.0+sha1.8c155dc114e1689d18937974f6571e0ceee66f1d"
 }
