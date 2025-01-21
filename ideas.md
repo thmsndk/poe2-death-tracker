@@ -78,6 +78,46 @@
   - Deaths per area/level
   - Area revisit patterns
 
+### Trial of Sekhmet Events
+
+- Death Crystal Events
+
+  - Log format: `2025/01/20 00:51:38 286639656 3ef2336b [INFO Client 18400] : 6 Death Crystals remaining`
+  - Track:
+    - Crystal consumption rate
+    - Time between crystal uses
+    - Crystal usage patterns per session
+    - Deaths vs crystal availability
+    - Crystal efficiency (time alive per crystal)
+    - Crystal depletion warnings (low/empty)
+    - Session impact of crystal availability
+    - Crystal usage by:
+      - Time of day
+      - Area level
+      - Character level
+      - Content type
+
+- Key Collection Events
+  - Log format: `2025/01/20 00:53:22 286743640 3ef2336b [INFO Client 18400] : Collected a {Bronze|Silver} key`
+  - Track:
+    - Key collection rate
+    - Time between keys
+    - Key types distribution
+    - Keys collected per run
+    - Run completion time
+    - Success rate analysis
+    - Trial efficiency metrics:
+      - Keys per minute
+      - Keys per death
+      - Keys vs crystal usage
+      - Optimal path analysis
+      - Run completion patterns
+    - Progress tracking:
+      - Bronze vs Silver key ratios
+      - Keys collected before failure
+      - Best/worst performing runs
+      - Learning curve analysis
+
 ## Twitch Integration 🎥
 
 - Auto-create stream markers on deaths for highlight reels
@@ -134,6 +174,22 @@
 - Fatigue analysis (deaths vs session length)
 - Best/worst performing hours
 - Recovery time after deaths
+- Time played enrichment
+  - Total time played per character
+  - Active vs idle time breakdown
+  - Session duration distribution
+  - Time between sessions
+  - Peak activity periods
+  - Time played milestones (first death, level 10, etc.)
+  - Deaths per hour of playtime
+  - XP efficiency (levels per hour played)
+  - Session start/end patterns
+  - Longest/shortest sessions
+  - Average session length by:
+    - Time of day
+    - Day of week
+    - Character level range
+    - Content type
 
 ### Progress Tracking
 

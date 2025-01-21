@@ -9,7 +9,9 @@
   "scripts": {
     "build": "tsc",
     "start": "ts-node src/index.ts",
+    "start2": "ts-node src/index.ts --v2",
     "dev": "ts-node-dev --respawn src/index.ts",
+    "dev2": "ts-node-dev --respawn src/index.ts --v2",
     "start:prod": "node dist/index.js",
     "data-sync": "ts-node scripts/data-sync.ts",
     "patch-version": "ts-node scripts/patch-version.ts"

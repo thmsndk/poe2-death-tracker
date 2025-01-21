@@ -2,6 +2,7 @@
 
 import { Command } from "commander";
 import { DeathTracker } from "./death-tracker";
+import { DeathTracker2 } from "./death-tracker2";
 import { POE2InstallationFinder } from "./poe2-installation-finder";
 import inquirer from "inquirer";
 import fs from "fs/promises";
@@ -36,6 +37,7 @@ program
   .option("-o, --output <dir>", "Output directory for stats")
   .option("--reset-config", "Reset configuration and prompt for new paths")
   .option("--test-twitch", "Test Twitch authentication flow")
+  .option("--v2", "Use DeathTracker2 implementation")
   .parse();
 
 async function loadConfig(): Promise<Config | null> {
@@ -192,6 +194,7 @@ async function setupTwitchConfig(): Promise<Config["twitch"]> {
 
 async function main() {
   const options = program.opts();
+  console.log("🔍 Debug: Using tracker version:", options.v2 ? "v2" : "v1");
 
   if (options.testTwitch) {
     try {
@@ -258,7 +261,8 @@ async function main() {
 
   // Command line arguments take precedence
   if (options.path && options.output) {
-    const tracker = new DeathTracker({
+    const TrackerClass = options.v2 ? DeathTracker2 : DeathTracker;
+    const tracker = new TrackerClass({
       logPath: options.path,
       outputDir: options.output,
     });
@@ -281,7 +285,12 @@ async function main() {
     `💡 Tip: Use this path in OBS Text Source's "Read from file" setting`
   );
 
-  const tracker = new DeathTracker(config);
+  const TrackerClass = options.v2 ? DeathTracker2 : DeathTracker;
+  console.log(
+    "🚀 Starting tracker:",
+    options.v2 ? "DeathTracker2" : "DeathTracker"
+  );
+  const tracker = new TrackerClass(config);
   await tracker.start();
 }
 
