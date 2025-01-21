@@ -38,31 +38,22 @@ export class EventManager extends EventEmitter {
     event: GameEvent & { isStartupEvent: boolean }
   ): GameEvent & { isStartupEvent: boolean } {
     // Update current character info
-    if (event.character.name) {
-      this.currentCharacter.name = event.character.name;
-    }
-    if (event.type === "level_up") {
-      this.currentCharacter.class = event.data.class;
-      this.currentCharacter.level = event.data.level;
-    }
-    if (event.type === "area") {
-      this.currentCharacter.area = event.data.name;
-    }
 
     return this.enrichEvent(event);
   }
 
   private enrichEvent<T extends GameEvent>(event: T): T {
-    return {
-      ...event,
-      character: {
-        name: event.character.name || this.currentCharacter.name || "",
-        class:
-          event.character.class || this.currentCharacter.class || undefined,
-        level:
-          event.character.level || this.currentCharacter.level || undefined,
-        area: event.character.area || this.currentCharacter.area || undefined,
-      },
-    };
+    // return {
+    //   ...event,
+    //   character: {
+    //     name: event.character.name || this.currentCharacter.name || "",
+    //     class:
+    //       event.character.class || this.currentCharacter.class || undefined,
+    //     level:
+    //       event.character.level || this.currentCharacter.level || undefined,
+    //     area: event.character.area || this.currentCharacter.area || undefined,
+    //   },
+    // };
+    return event;
   }
 }

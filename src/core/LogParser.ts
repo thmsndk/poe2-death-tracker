@@ -1,29 +1,26 @@
 import * as fs from "fs/promises";
 import { FSWatcher, watch } from "fs";
-import * as path from "path";
 import { EventEmitter } from "events";
 
 interface BaseEvent {
   timestamp: string;
   type: EventType;
-  character: {
-    name: string;
-    class?: string;
-    level?: number;
-    area?: string;
-  };
 }
 
 export interface DeathEvent extends BaseEvent {
   type: "death";
+  character: {
+    name: string;
+  };
   data: Record<string, never>; // empty object since death has no additional data
 }
 
 export interface LevelUpEvent extends BaseEvent {
   type: "level_up";
-  data: {
-    level: number;
+  character: {
+    name: string;
     class: string;
+    level: number;
   };
 }
 
@@ -36,7 +33,7 @@ export interface IdentifyEvent extends BaseEvent {
 
 export interface AreaEvent extends BaseEvent {
   type: "area";
-  data: {
+  area: {
     level: number;
     name: string;
     seed: number;
@@ -212,24 +209,24 @@ export class LogParser extends EventEmitter {
           /(\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}).*\[INFO Client.*\] : (.*) has been slain\./,
         function: this.parseDeathEvent,
       },
-      // {
-      //   // level up event
-      //   regex:
-      //     /(\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}).*\[INFO Client.*\] : (.*) \((.*)\) is now level (\d+)/,
-      //   function: this.parseLevelUpEvent,
-      // },
+      {
+        // level up event
+        regex:
+          /(\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}).*\[INFO Client.*\] : (.*) \((.*)\) is now level (\d+)/,
+        function: this.parseLevelUpEvent,
+      },
       // {
       //   // item identification event
       //   regex:
       //     /(\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}).*\[INFO Client \d+\] : (\d+) Items? identified/,
       //   function: this.parseIdentifyEvent,
       // },
-      // {
-      //   // area generation event
-      //   regex:
-      //     /(\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}).*\[DEBUG Client \d+\] Generating level (\d+) area "([^"]+)" with seed (\d+)/,
-      //   function: this.parseAreaEvent,
-      // },
+      {
+        // area generation event
+        regex:
+          /(\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}).*\[DEBUG Client \d+\] Generating level (\d+) area "([^"]+)" with seed (\d+)/,
+        function: this.parseAreaEvent,
+      },
       // {
       //   // passive skill allocation
       //   regex:
@@ -257,6 +254,7 @@ export class LogParser extends EventEmitter {
     for (const pattern of patterns) {
       const match = line.match(pattern.regex);
       if (match) {
+        console.log("🔄 Match:", match);
         return pattern.function(match);
       }
     }
@@ -264,7 +262,7 @@ export class LogParser extends EventEmitter {
     return null;
   }
 
-  private parseLevelUpEvent(match: RegExpMatchArray): GameEvent | null {
+  private parseLevelUpEvent(match: RegExpMatchArray): LevelUpEvent | null {
     return {
       timestamp: match[1],
       type: "level_up",
@@ -273,14 +271,10 @@ export class LogParser extends EventEmitter {
         class: match[3],
         level: parseInt(match[4], 10),
       },
-      data: {
-        level: parseInt(match[4], 10),
-        class: match[3],
-      },
     };
   }
 
-  private parseDeathEvent(match: RegExpMatchArray): GameEvent | null {
+  private parseDeathEvent(match: RegExpMatchArray): DeathEvent | null {
     return {
       timestamp: match[1],
       type: "death",
@@ -291,15 +285,11 @@ export class LogParser extends EventEmitter {
     };
   }
 
-  private parseAreaEvent(match: RegExpMatchArray): GameEvent | null {
+  private parseAreaEvent(match: RegExpMatchArray): AreaEvent | null {
     return {
       timestamp: match[1],
       type: "area",
-      character: {
-        name: "", // Will be enriched by EventManager
-        area: match[3],
-      },
-      data: {
+      area: {
         level: parseInt(match[2], 10),
         name: match[3],
         seed: parseInt(match[4], 10),
@@ -307,26 +297,22 @@ export class LogParser extends EventEmitter {
     };
   }
 
-  private parseIdentifyEvent(match: RegExpMatchArray): GameEvent | null {
+  private parseIdentifyEvent(match: RegExpMatchArray): IdentifyEvent | null {
     return {
       timestamp: match[1],
       type: "identify",
-      character: {
-        name: "", // Will be enriched by EventManager
-      },
       data: {
         itemCount: parseInt(match[2], 10),
       },
     };
   }
 
-  private parsePassiveSkillEvent(match: RegExpMatchArray): GameEvent | null {
+  private parsePassiveSkillEvent(
+    match: RegExpMatchArray
+  ): PassiveAllocatedEvent | null {
     return {
       timestamp: match[1],
       type: "passive_allocated",
-      character: {
-        name: "", // Will be enriched by EventManager
-      },
       data: {
         skillId: match[2],
         skillName: match[3],
@@ -334,13 +320,10 @@ export class LogParser extends EventEmitter {
     };
   }
 
-  private parseAfkStatusEvent(match: RegExpMatchArray): GameEvent | null {
+  private parseAfkStatusEvent(match: RegExpMatchArray): AfkStatusEvent | null {
     return {
       timestamp: match[1],
       type: "afk_status",
-      character: {
-        name: "", // Will be enriched by EventManager
-      },
       data: {
         status: match[2] === "ON",
         autoReply: match[2] === "ON" ? "This player is AFK." : null,

@@ -5,6 +5,7 @@ import { GlobalStats, StateManager } from "./core/StateManager";
 // import { TwitchAPI } from "./core/TwitchAPI";
 import { TwitchAuthResult, TwitchCredentials } from "./core/TwitchAuth";
 import { TwitchOutput } from "./core/TwitchOutput";
+import { inspect } from "util";
 
 interface Config {
   logPath: string;
@@ -50,28 +51,29 @@ export class DeathTracker2 {
     this.logParser.on(
       "event",
       (rawEvent: GameEvent & { isStartupEvent: boolean }) => {
-        // EventManager processes and enriches events with current character info
-        const processedEvent = this.eventManager.processEvent(rawEvent);
-        console.log("🔄 Event:", {
-          type: processedEvent.type,
-          timestamp: processedEvent.timestamp,
-          character: processedEvent.character,
-          details: processedEvent.data,
-        });
+        console.log("🔄 Event:", rawEvent);
 
         // StateManager updates game state
-        this.stateManager.handleEvent(processedEvent);
+        this.stateManager.handleEvent(rawEvent);
 
         // Twitch: Make stream markers
         if (this.twitchOutput) {
-          this.twitchOutput.handleGameEvent(processedEvent);
+          this.twitchOutput.handleGameEvent(rawEvent);
         }
       }
     );
 
     this.logParser.on("startupDone", () => {
       console.log("🚀 Startup done");
-      console.log(this.stateManager.getState());
+      console.log(
+        "Current State:",
+        inspect(this.stateManager.getState(), {
+          depth: null, // Show all nesting levels
+          colors: true, // Enable colors
+          maxArrayLength: null, // Show full arrays
+          compact: false, // Pretty formatting
+        })
+      );
     });
 
     // 4. StateManager emits state updates

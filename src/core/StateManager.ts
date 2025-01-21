@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import { GameEvent } from "./LogParser";
+import { AreaEvent, DeathEvent, GameEvent, LevelUpEvent } from "./LogParser";
 // export interface TimeStats {
 //   byHour: Record<number, number>;
 //   byDay: Record<number, number>;
@@ -27,7 +27,7 @@ export interface LeagueStatus {
 }
 
 export interface CharacterInstance {
-  id: string;
+  // id: string;
   name: string;
   class: string;
   league: LeagueStatus;
@@ -35,12 +35,12 @@ export interface CharacterInstance {
   deaths: number;
   created: string;
   lastSeen: string;
-  levelingStats: LevelingStats;
+  area: AreaEvent["area"] | null;
+  // levelingStats: LevelingStats;
   // timeStats: TimeStats;
 }
 
 export interface GlobalStats {
-  characters: Record<string, CharacterInstance[]>;
   deaths: {
     total: number;
   };
@@ -63,17 +63,18 @@ export interface GlobalStats {
  */
 export class StateManager extends EventEmitter {
   private stats: GlobalStats;
-  private activeCharacter: string | null = null;
-  private activeSession: string | null = null;
+  private character: CharacterInstance | null = null;
+  private characterCache: Record<string, CharacterInstance[]> = {};
+  private currentArea: AreaEvent | null = null;
 
   constructor(outputDir: string) {
     super();
     this.stats = {
-      characters: {},
       deaths: {
         total: 0,
       },
     };
+    this.characterCache = {};
   }
 
   buildStateFromCache() {
@@ -83,7 +84,6 @@ export class StateManager extends EventEmitter {
 
   handleEvent(event: GameEvent & { isStartupEvent: boolean }): void {
     // TODO: What do we do about startup events? it kinda depends if we have cached that specific event already, because then buildStateFromCache would have handled it
-    // TODO: If we are suddenly lower level, this means it's a new character instance
     // // Update active character/session
     // this.updateActiveState(event);
     // // Update stats based on event type
@@ -91,12 +91,12 @@ export class StateManager extends EventEmitter {
       case "death":
         this.handleDeath(event);
         break;
-      // case "level_up":
-      //   this.handleLevelUp(event);
-      //   break;
-      // case "area":
-      //   this.handleAreaChange(event);
-      //   break;
+      case "level_up":
+        this.handleLevelUp(event);
+        break;
+      case "area":
+        this.handleAreaChange(event);
+        break;
       // case "identify":
       //   this.handleIdentify(event);
       //   break;
@@ -105,37 +105,100 @@ export class StateManager extends EventEmitter {
     // this.emit("state-updated", this.getState());
   }
 
-  private handleDeath(event: GameEvent): void {
+  private handleDeath(event: DeathEvent): void {
     // Global death counter
     this.stats.deaths.total++;
 
     // Character specific death
+    const character = this.getOrCreateCharacter(
+      event.character.name,
+      event.timestamp
+    );
 
-    // const char = this.getOrCreateCharacter(event.character);
-    // char.deaths++;
-    // char.lastSeen = event.timestamp;
-    // this.stats.totalDeaths++;
-    // this.updateTimeStats(event.timestamp, char.deathStats!);
+    // Update character
+    character.deaths++;
+    // TODO: We might want to track what area we died in
+    character.area = this.currentArea?.area || null;
+    character.lastSeen = event.timestamp;
+    if (character.league.current === "hardcore") {
+      character.league.hardcoreUntil = event.timestamp;
+      character.league.current = "standard";
+    }
+    // TODO: what area did we die in? track "current_area"
   }
 
-  // private handleLevelUp(event: GameEvent): void {
-  //   const char = this.getOrCreateCharacter(event.character);
-  //   char.maxLevel = Math.max(char.maxLevel, event.data.level);
-  //   char.class = event.data.class;
-  //   char.lastSeen = event.timestamp;
-  //   this.updateLevelingStats(char, event);
-  // }
+  private handleLevelUp(event: LevelUpEvent): void {
+    const character = this.getOrCreateCharacter(
+      event.character.name,
+      event.timestamp,
+      event.character.class,
+      event.character.level
+    );
 
-  getState(): GlobalStats {
-    return this.stats;
+    // Update character
+    character.maxLevel = event.character.level;
+    character.lastSeen = event.timestamp;
   }
 
-  // getActiveCharacter(): CharacterStats | null {
-  //   // return this.activeCharacter
-  //   //   ? this.stats.characters[this.activeCharacter]
-  //   //   : null;
-  //   return null
-  // }
+  private handleAreaChange(event: AreaEvent): void {
+    this.currentArea = event;
+  }
 
-  // ... additional state management methods
+  getState(): {
+    stats: GlobalStats;
+    characters: Record<string, CharacterInstance[]>;
+  } {
+    return { stats: this.stats, characters: this.characterCache };
+  }
+
+  private getOrCreateCharacter(
+    name: string,
+    timestamp: string,
+    characterClass?: string,
+    level?: number
+  ): CharacterInstance {
+    if (this.character && this.character.name === name) {
+      if (level === undefined && this.character.maxLevel > 1) {
+        // death event or something else, we return the current character
+        return this.character;
+      }
+
+      if (
+        level &&
+        level > this.character.maxLevel &&
+        this.character.class !== "Unknown"
+      ) {
+        // level up event, we return the current character
+        return this.character;
+      }
+    }
+
+    if (this.character && this.character.name !== name) {
+      // TODO: fetch from file cache
+    }
+
+    // Create new instance
+    console.log("Creating new character instance", name, characterClass, level);
+
+    this.character = {
+      name: name,
+      class: characterClass || "Unknown",
+      league: {
+        current: "hardcore",
+      },
+      maxLevel: level || 1,
+      deaths: 0,
+      created: timestamp,
+      lastSeen: timestamp,
+      area: this.currentArea ? this.currentArea.area : null,
+    };
+
+    if (!this.characterCache[name]) {
+      this.characterCache[name] = [this.character];
+    } else {
+      this.characterCache[name].push(this.character);
+    }
+
+    return this.character;
+  }
 }
