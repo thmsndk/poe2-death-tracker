@@ -117,14 +117,16 @@ export class StateManager extends EventEmitter {
 
     // Update character
     character.deaths++;
-    // TODO: We might want to track what area we died in
+    // TODO: We might want to track what area we died in, and each death event
+
     character.area = this.currentArea?.area || null;
+
     character.lastSeen = event.timestamp;
+
     if (character.league.current === "hardcore") {
       character.league.hardcoreUntil = event.timestamp;
       character.league.current = "standard";
     }
-    // TODO: what area did we die in? track "current_area"
   }
 
   private handleLevelUp(event: LevelUpEvent): void {
@@ -138,6 +140,9 @@ export class StateManager extends EventEmitter {
     // Update character
     character.maxLevel = event.character.level;
     character.lastSeen = event.timestamp;
+
+    // class can change e.g. Sorceress -> Stormweaver
+    character.class = event.character.class;
   }
 
   private handleAreaChange(event: AreaEvent): void {
