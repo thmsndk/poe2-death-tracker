@@ -61,6 +61,21 @@ export type GameState = {
   characters: Record<string, CharacterInstance[]>;
 };
 
+interface StateManagerEvents {
+  "state-updated": (state: GameState) => void;
+}
+
+export declare interface StateManager extends EventEmitter {
+  on<E extends keyof StateManagerEvents>(
+    event: E,
+    listener: StateManagerEvents[E]
+  ): this;
+  emit<E extends keyof StateManagerEvents>(
+    event: E,
+    ...args: Parameters<StateManagerEvents[E]>
+  ): boolean;
+}
+
 /**
  * StateManager maintains the global application state and character statistics.
  * It processes enriched game events to update:
@@ -116,8 +131,11 @@ export class StateManager extends EventEmitter {
       //   this.handleIdentify(event);
       //   break;
     }
-    // Emit state changes
-    // this.emit("state-updated", this.getState());
+
+    if (!event.isStartupEvent) {
+      // Emit state changes
+      this.emit("state-updated", this.getState());
+    }
   }
 
   private handleDeath(event: DeathEvent): void {

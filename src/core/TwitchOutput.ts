@@ -34,7 +34,7 @@ export class TwitchOutput {
       case "death":
         return `💀 ${event.character.name} died!`;
       case "level_up":
-        return `🎉 ${event.character.name} (${event.data.class}) reached level ${event.data.level}!`;
+        return `🎉 ${event.character.name} (${event.character.class}) reached level ${event.character.level}!`;
       default:
         return null;
     }

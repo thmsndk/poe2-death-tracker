@@ -88,13 +88,11 @@ export class DeathTracker2 {
     });
 
     // 4. StateManager emits state updates
-    this.stateManager.on("state-updated", async (newState: GlobalStats) => {
+    this.stateManager.on("state-updated", async (newState) => {
       console.log("📊 State updated");
 
-      // 5. OutputManager generates files
-      // const activeChar = this.stateManager.getActiveCharacter();
-      // await this.outputManager.updateOutputs(newState, activeChar);
-      // console.log("📄 Outputs updated");
+      await this.outputManager.updateOutputs(newState);
+      console.log("📄 Outputs updated");
     });
   }
 
