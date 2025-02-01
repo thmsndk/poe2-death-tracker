@@ -1,11 +1,12 @@
 import { GameEvent, LogParser } from "./core/LogParser";
-import { EventManager } from "./core/EventManager";
+import { OutputManager } from "./core/OutputManager";
 import { GlobalStats, StateManager } from "./core/StateManager";
-// import { OutputManager } from "./core/OutputManager";
 // import { TwitchAPI } from "./core/TwitchAPI";
 import { TwitchAuthResult, TwitchCredentials } from "./core/TwitchAuth";
 import { TwitchOutput } from "./core/TwitchOutput";
 import { inspect } from "util";
+import { GameDataService } from "./services/gameDataService";
+import path from "path";
 
 interface Config {
   logPath: string;
@@ -19,20 +20,27 @@ interface Config {
 
 export class DeathTracker2 {
   private logParser: LogParser;
-  private eventManager: EventManager;
   private stateManager: StateManager;
-  // private outputManager: OutputManager;
+  private outputManager: OutputManager;
   private twitchOutput?: TwitchOutput;
+  private gameDataService: GameDataService;
 
   constructor(config: Config) {
     console.log("🚀 Initializing Death Tracker 2.0...");
 
     // Initialize components
     this.logParser = new LogParser(config.logPath);
-    this.eventManager = new EventManager();
     this.stateManager = new StateManager(config.outputDir);
     this.stateManager.buildStateFromCache();
-    // this.outputManager = new OutputManager(config.outputDir);
+
+    this.gameDataService = new GameDataService();
+    // TODO: not sure if this is the right path if we build the app, but it works in dev mode.
+    this.gameDataService.loadData(path.join(__dirname, ".."));
+
+    this.outputManager = new OutputManager(
+      config.outputDir,
+      this.gameDataService
+    );
 
     // Initialize Twitch if enabled
     if (config.twitch?.enabled) {
@@ -65,15 +73,18 @@ export class DeathTracker2 {
 
     this.logParser.on("startupDone", () => {
       console.log("🚀 Startup done");
-      console.log(
-        "Current State:",
-        inspect(this.stateManager.getState(), {
-          depth: null, // Show all nesting levels
-          colors: true, // Enable colors
-          maxArrayLength: null, // Show full arrays
-          compact: false, // Pretty formatting
-        })
-      );
+      // console.log(
+      //   "Current State:",
+      //   inspect(this.stateManager.getState(), {
+      //     depth: null, // Show all nesting levels
+      //     colors: true, // Enable colors
+      //     maxArrayLength: null, // Show full arrays
+      //     compact: false, // Pretty formatting
+      //   })
+      // );
+
+      // TODO: Make output manager generate files?
+      this.outputManager.updateOutputs(this.stateManager.getState());
     });
 
     // 4. StateManager emits state updates

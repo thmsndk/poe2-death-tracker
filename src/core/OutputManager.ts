@@ -1,6 +1,12 @@
 import * as fs from "fs/promises";
 import * as path from "path";
-import { GlobalStats, CharacterStats } from "../types";
+import { GameDataService } from "../services/gameDataService";
+import {
+  CharacterInstance,
+  DeathStats,
+  GameState,
+  GlobalStats,
+} from "./StateManager";
 
 /**
  * OutputManager handles writing game statistics to files for streaming overlays.
@@ -15,64 +21,61 @@ import { GlobalStats, CharacterStats } from "../types";
  */
 export class OutputManager {
   private outputDir: string;
+  private gameDataService: GameDataService;
 
-  constructor(outputDir: string) {
+  constructor(outputDir: string, gameDataService: GameDataService) {
     this.outputDir = outputDir + "/2";
+    this.gameDataService = gameDataService;
   }
 
-  async updateOutputs(
-    stats: GlobalStats,
-    activeCharacter: CharacterStats | null
-  ) {
+  async updateOutputs(state: GameState) {
     await this.ensureOutputDir();
+    await this.writeGlobalStats(state.stats);
+    await this.writeRecentDeaths(state.stats.deaths.recent);
 
-    // Global stats
+    // if (activeCharacter) {
+    //   await this.writeCharacterStats(activeCharacter);
+    //   await this.writeLevelingStats(activeCharacter);
+    //   await this.writeSessionStats(activeCharacter);
+    // }
+  }
+
+  private async writeGlobalStats(stats: GlobalStats) {
     await this.writeFile(
       "total_deaths.txt",
-      `💀 Total Deaths: ${stats.totalDeaths}`
+      `💀 Total Deaths: ${stats.deaths.total}`
     );
+  }
 
-    if (activeCharacter) {
-      await this.writeCharacterStats(activeCharacter);
-      await this.writeLevelingStats(activeCharacter);
-      await this.writeSessionStats(activeCharacter);
+  private async writeRecentDeaths(deaths: DeathStats["recent"]) {
+    if (!deaths?.length) return;
+
+    const formattedDeaths = deaths.slice(-5).map((e) => {
+      const classStr = e.class ? `${e.class}` : "Unknown";
+      const level = e.level ? `${e.level}` : "??";
+
+      let areaStr = "";
+      if (e.area) {
+        const areaMatch = this.gameDataService.findExactWorldArea(e.area.name);
+        areaStr = areaMatch.length > 0 ? areaMatch[0].item.Name : e.area.name;
+      }
+
+      return `${e.timestamp} | ${level} ${e.name} (${classStr}) | ${areaStr}`;
+    });
+
+    if (formattedDeaths.length) {
+      // Write descending (most recent first)
+      await this.writeFile(
+        "last_five_deaths_desc.txt",
+        [...formattedDeaths].reverse().join("\n")
+      );
+
+      // Write ascending (oldest first)
+      await this.writeFile(
+        "last_five_deaths_asc.txt",
+        formattedDeaths.join("\n")
+      );
     }
-  }
-
-  private async writeCharacterStats(character: CharacterStats) {
-    const basic = [
-      `👤 ${character.class}`,
-      `📊 Level ${character.maxLevel}`,
-      `💀 Deaths: ${character.deaths}`,
-    ].join(" | ");
-
-    await this.writeFile("current_character.txt", basic);
-  }
-
-  private async writeLevelingStats(character: CharacterStats) {
-    if (!character.levelingStats) return;
-
-    const stats = character.levelingStats;
-    const levelHistory = Object.entries(stats.timeToLevel)
-      .slice(-5)
-      .map(
-        ([level, info]) =>
-          `L${level}: ${this.formatDuration(info.secondsTaken)}`
-      )
-      .join(" ➡️ ");
-
-    await this.writeFile("current_character_levels.txt", levelHistory);
-  }
-
-  private async writeSessionStats(character: CharacterStats) {
-    const sessionStats = [
-      `🎮 Session Stats`,
-      `⏱️ Started: ${character.created}`,
-      `📊 Current Level: ${character.levelingStats?.currentLevel}`,
-      `💀 Deaths: ${character.deaths}`,
-    ].join("\n");
-
-    await this.writeFile("current_session.txt", sessionStats);
   }
 
   private async writeFile(filename: string, content: string) {

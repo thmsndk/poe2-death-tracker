@@ -26,26 +26,40 @@ export interface LeagueStatus {
   hardcoreUntil?: string;
 }
 
+export interface DeathStats {
+  total: number;
+  recent: Array<{
+    timestamp: string;
+    name: string;
+    class: string;
+    level: number;
+    area: AreaEvent["area"] | undefined;
+  }>;
+}
+
 export interface CharacterInstance {
   // id: string;
   name: string;
   class: string;
   league: LeagueStatus;
   maxLevel: number;
-  deaths: number;
+  deaths: DeathStats;
   created: string;
   lastSeen: string;
-  area: AreaEvent["area"] | null;
+  area: AreaEvent["area"] | undefined;
   // levelingStats: LevelingStats;
   // timeStats: TimeStats;
 }
 
 export interface GlobalStats {
-  deaths: {
-    total: number;
-  };
+  deaths: DeathStats;
   // deathStats: TimeStats;
 }
+
+export type GameState = {
+  stats: GlobalStats;
+  characters: Record<string, CharacterInstance[]>;
+};
 
 /**
  * StateManager maintains the global application state and character statistics.
@@ -72,6 +86,7 @@ export class StateManager extends EventEmitter {
     this.stats = {
       deaths: {
         total: 0,
+        recent: [],
       },
     };
     this.characterCache = {};
@@ -106,20 +121,30 @@ export class StateManager extends EventEmitter {
   }
 
   private handleDeath(event: DeathEvent): void {
-    // Global death counter
-    this.stats.deaths.total++;
-
     // Character specific death
     const character = this.getOrCreateCharacter(
       event.character.name,
       event.timestamp
     );
 
-    // Update character
-    character.deaths++;
-    // TODO: We might want to track what area we died in, and each death event
+    character.area = this.currentArea?.area || undefined;
 
-    character.area = this.currentArea?.area || null;
+    const enrichedDeath = {
+      timestamp: event.timestamp,
+      name: character.name,
+      class: character.class,
+      level: character.maxLevel,
+      area: character.area || undefined,
+    };
+
+    // Global death counter
+    this.stats.deaths.total++;
+
+    this.stats.deaths.recent.push(enrichedDeath);
+
+    // Update character
+    character.deaths.total++;
+    character.deaths.recent.push(enrichedDeath);
 
     character.lastSeen = event.timestamp;
 
@@ -149,10 +174,7 @@ export class StateManager extends EventEmitter {
     this.currentArea = event;
   }
 
-  getState(): {
-    stats: GlobalStats;
-    characters: Record<string, CharacterInstance[]>;
-  } {
+  getState(): GameState {
     return { stats: this.stats, characters: this.characterCache };
   }
 
@@ -192,10 +214,13 @@ export class StateManager extends EventEmitter {
         current: "hardcore",
       },
       maxLevel: level || 1,
-      deaths: 0,
+      deaths: {
+        total: 0,
+        recent: [],
+      },
       created: timestamp,
       lastSeen: timestamp,
-      area: this.currentArea ? this.currentArea.area : null,
+      area: this.currentArea ? this.currentArea.area : undefined,
     };
 
     if (!this.characterCache[name]) {
