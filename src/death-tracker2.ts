@@ -59,7 +59,7 @@ export class DeathTracker2 {
     this.logParser.on(
       "event",
       (rawEvent: GameEvent & { isStartupEvent: boolean }) => {
-        console.log("🔄 Event:", rawEvent);
+        // console.log("🔄 Event:", rawEvent);
 
         // StateManager updates game state
         this.stateManager.handleEvent(rawEvent);
@@ -89,10 +89,10 @@ export class DeathTracker2 {
 
     // 4. StateManager emits state updates
     this.stateManager.on("state-updated", async (newState) => {
-      console.log("📊 State updated");
+      // console.log("📊 State updated");
 
       await this.outputManager.updateOutputs(newState);
-      console.log("📄 Outputs updated");
+      // console.log("📄 Outputs updated");
     });
   }
 

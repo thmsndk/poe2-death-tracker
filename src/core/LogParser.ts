@@ -107,7 +107,7 @@ export class LogParser extends EventEmitter {
   private lastPosition: number = 0;
   private watcher: FSWatcher | null = null;
   private pollInterval: NodeJS.Timeout | null = null;
-  private readonly POLL_INTERVAL_MS = 1000; // Poll every second
+  private readonly POLL_INTERVAL_MS = 5000; // Poll every 5 seconds
   private lastProcessTime: number = 0;
   private readonly THROTTLE_MS = 1000; // Throttle to 1 second
 
@@ -118,6 +118,10 @@ export class LogParser extends EventEmitter {
 
   async start() {
     try {
+      // Get initial file stats first
+      const stats = await fs.stat(this.filePath);
+
+      // TODO: The initial file read might be so large that we can't read it all at some point.
       // Initial parse of existing content
       const content = await fs.readFile(this.filePath, "utf-8");
       const lines = content.split("\n");
@@ -131,11 +135,10 @@ export class LogParser extends EventEmitter {
         }
       }
 
-      this.emit("startupDone");
-
-      // Get initial file size and start watching
-      const stats = await fs.stat(this.filePath);
+      // Set the last position AFTER we've read all the content
       this.lastPosition = stats.size;
+
+      this.emit("startupDone");
 
       // Start watching file
       this.watcher = watch(this.filePath, (eventType) => {
@@ -149,7 +152,9 @@ export class LogParser extends EventEmitter {
         await fs.stat(this.filePath);
       }, this.POLL_INTERVAL_MS);
 
-      console.log(`🔍 Watching for events in: ${this.filePath}`);
+      console.log(
+        `🔍 Watching for events in: ${this.filePath} (starting from byte ${this.lastPosition})`
+      );
     } catch (error) {
       console.error("❌ Error starting log parser:", error);
     }
@@ -168,33 +173,66 @@ export class LogParser extends EventEmitter {
 
   private async processNewLines() {
     try {
-      const fileHandle = await fs.open(this.filePath, "r");
-      const { size } = await fs.stat(this.filePath);
+      const currentTime = Date.now();
+      const stats = await fs.stat(this.filePath);
+      const size = stats.size;
+      let newBytes = size - this.lastPosition;
 
-      if (size < this.lastPosition) {
-        // File was truncated/reset
-        this.lastPosition = 0;
+      console.log(
+        `📊 File check - Current: ${size} bytes, Previous: ${this.lastPosition} bytes, Delta: ${newBytes} bytes`
+      );
+
+      // If we processed recently, skip
+      if (currentTime - this.lastProcessTime < this.THROTTLE_MS) {
+        console.log(`⏱️ Skipping process - too soon after last check`);
+        return;
       }
 
-      if (size > this.lastPosition) {
-        const buffer = Buffer.alloc(size - this.lastPosition);
-        await fileHandle.read(buffer, 0, buffer.length, this.lastPosition);
-        this.lastPosition = size;
+      // Handle file truncation first
+      if (size < this.lastPosition) {
+        console.log(
+          `⚠️ File size decreased from ${this.lastPosition} to ${size} - file may have been truncated`
+        );
+        this.lastPosition = 0;
+        newBytes = size; // Reset newBytes to read the entire file
+      }
 
-        const newLines = buffer.toString().split("\n");
+      if (newBytes === 0) {
+        console.log(
+          `ℹ️ File changed but size remained the same (size: ${size})`
+        );
+        return;
+      }
+
+      const fileHandle = await fs.open(this.filePath, "r");
+
+      try {
+        const { buffer, bytesRead } = await fileHandle.read({
+          buffer: Buffer.alloc(newBytes),
+          position: this.lastPosition,
+        });
+
+        console.log(`📖 Read ${bytesRead} bytes from file`);
+
+        const newContent = buffer.toString();
+        const newLines = newContent.split("\n").filter((line) => line.trim());
+        console.log(`📋 Processing ${newLines.length} new lines`);
+
         for (const line of newLines) {
-          if (line.trim()) {
-            const event = this.parseLine(line);
-            if (event) {
-              this.emit("event", { ...event, isStartupEvent: false });
-            }
+          const event = this.parseLine(line);
+          if (event) {
+            this.emit("event", { ...event, isStartupEvent: false });
           }
         }
-      }
 
-      await fileHandle.close();
+        this.lastPosition = size;
+        this.lastProcessTime = currentTime;
+      } finally {
+        await fileHandle.close();
+      }
     } catch (error) {
       console.error("❌ Error processing new lines:", error);
+      console.error(error);
     }
   }
 
@@ -254,7 +292,7 @@ export class LogParser extends EventEmitter {
     for (const pattern of patterns) {
       const match = line.match(pattern.regex);
       if (match) {
-        console.log("🔄 Match:", match);
+        // console.log("🔄 Match:", match);
         return pattern.function(match);
       }
     }
