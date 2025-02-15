@@ -44,7 +44,7 @@ export class DeathTracker2 {
 
     // Initialize Twitch if enabled
     if (config.twitch?.enabled) {
-      // this.twitchOutput = new TwitchOutput(config.twitch);
+      this.twitchOutput = new TwitchOutput(config.twitch);
       console.log(
         "🎮 Twitch integration enabled - Stream markers will be created for deaths and level ups"
       );
